@@ -12,7 +12,7 @@
   body { margin:0; color:var(--ink); background:#050510; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,"Segoe UI",sans-serif; }
   button { color:inherit; font:inherit; cursor:pointer; }
   .scene { position:relative; height:100svh; min-height:580px; max-height:1100px; overflow:hidden; isolation:isolate; background:radial-gradient(ellipse at 48% 48%,#11122b 0%,#090918 42%,#03030b 100%); }
-  #network { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+  #network { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; cursor:grab; }
   #network.dragging { cursor:grabbing; }
   .top { position:absolute; z-index:3; left:clamp(18px,3.5vw,52px); right:clamp(18px,3.5vw,52px); top:clamp(18px,3.2vh,36px); display:flex; align-items:flex-start; justify-content:space-between; gap:20px; pointer-events:none; }
   .brand { pointer-events:auto; max-width:min(60vw,620px); text-shadow:0 2px 18px rgba(0,0,0,.5); }
@@ -28,10 +28,6 @@
   .help h2 { font-family:Georgia,"Times New Roman",serif; font-weight:400; font-size:20px; margin:0 0 12px; }
   .help p { color:var(--muted); font-size:12px; line-height:1.7; margin:7px 0; }
   .help strong { color:#fff4ff; font-weight:550; }
-  .scene-note { position:absolute; z-index:2; left:clamp(18px,3.5vw,52px); bottom:clamp(17px,3vh,32px); color:rgba(224,222,246,.52); font-size:10px; letter-spacing:.08em; text-transform:uppercase; pointer-events:none; text-shadow:0 2px 10px #050510; }
-  .scene-note .dot { display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--pink); box-shadow:0 0 9px var(--pink); margin:0 8px 1px 0; }
-  .scroll-cue { position:absolute; z-index:2; right:clamp(18px,3.5vw,52px); bottom:clamp(17px,3vh,32px); color:rgba(224,222,246,.48); font-size:10px; letter-spacing:.11em; text-transform:uppercase; text-decoration:none; }
-  .scroll-cue:hover { color:rgba(255,244,255,.9); }
   .connections { max-width:1500px; margin:0 auto; padding:24px clamp(16px,3.5vw,52px) 36px; }
   details.connection-index { border-top:1px solid rgba(202,197,242,.16); }
   details.connection-index > summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 2px; cursor:pointer; color:rgba(242,236,255,.82); }
@@ -45,7 +41,6 @@
   .edge-names span { display:block; }
   .edge-r { white-space:nowrap; font-variant-numeric:tabular-nums; font-size:11px; color:#ffaddb; }
   .edge-r.neg { color:#8feaff; }
-  .disclaimer { display:flex; justify-content:space-between; gap:15px; flex-wrap:wrap; padding:17px 2px 0; border-top:1px solid rgba(202,197,242,.1); color:rgba(213,210,239,.38); font-size:10px; }
   @media (max-width:900px) { .scene { min-height:560px; } .edge-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width:600px) {
     .scene { height:88svh; min-height:600px; max-height:none; }
@@ -55,8 +50,6 @@
     .actions { margin-top:13px; justify-content:flex-start; }
     .button { padding:8px 11px; font-size:10px; }
     .help { top:126px; left:16px; right:16px; width:auto; }
-    .scene-note { left:16px; bottom:14px; font-size:8px; }
-    .scroll-cue { right:16px; bottom:14px; font-size:8px; }
     .connections { padding:16px 12px 25px; }
     .edge-grid { grid-template-columns:1fr; }
     .summary-title { font-size:17px; }
@@ -80,19 +73,15 @@
     <h2>How to use</h2>
     <p><strong>Drag any node away from or towards the center.</strong></p>
     <p>Away means positive change; towards means negative change.</p>
-    <p>Connected nodes move after a short delay. Positive links carry the same direction of movement; negative links reverse it. The whole string flashes as each signal passes.</p>
+    <p>Connected nodes move after a short delay. Positive links carry the same direction of movement; negative links reverse it.</p>
     <p>Disturbances continue propagating until you choose <strong>Return to rest</strong>.</p>
-    <p>Each connection represents an observed association, not a cause.</p>
   </aside>
-  <div class="scene-note"><span class="dot"></span><span id="activity">The field is at rest</span></div>
-  <a class="scroll-cue" href="#connections">43 connections ↓</a>
 </section>
 <section class="connections" id="connections">
   <details class="connection-index">
-    <summary><span class="summary-title">The connections</span><span class="summary-meta">43 correlations · explore the links&nbsp; +</span></summary>
+    <summary><span class="summary-title">correlations</span><span class="summary-meta">explore the links&nbsp; +</span></summary>
     <div id="edgeGrid" class="edge-grid"></div>
   </details>
-  <div class="disclaimer"><span>Positive and negative correlations guide the direction of each signal.</span><span>Associations, not causes.</span></div>
 </section>
 <script>
 (() => {
@@ -131,7 +120,6 @@ const adjacency=new Map(nodes.map(n=>[n.id,[]]));
 edges.forEach(e=>{adjacency.get(e.a).push(e);adjacency.get(e.b).push(e);});
 const canvas=document.getElementById('network');
 const ctx=canvas.getContext('2d',{alpha:true});
-const activity=document.getElementById('activity');
 const restButton=document.getElementById('restButton');
 const howButton=document.getElementById('howButton');
 const howPanel=document.getElementById('howPanel');
@@ -139,7 +127,7 @@ const edgeGrid=document.getElementById('edgeGrid');
 const reducedMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const MAX_WAVES=150, STRENGTH=3.375, DAMPING=.92, AMBIENT=reducedMotion?1.8:5.8; // 50% more responsive node motion
 let width=800,height=650,dpr=1,previous=0,selectedNode=null,selectedEdge=null,hoveredNode=null,dragging=null;
-let waves=[],flowing=false,lastInteraction=0;
+let waves=[];
 const nowMs=()=>performance.now();
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mod=(x,n)=>((x%n)+n)%n;
@@ -252,10 +240,13 @@ function draw(t){
  if(dragging){const n=byId.get(dragging.id),p=positions.get(n.id);ctx.save();ctx.globalAlpha=.52;ctx.strokeStyle=n.color;ctx.lineWidth=1;ctx.setLineDash([2,9]);ctx.beginPath();ctx.moveTo(c.x,c.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.restore();}
 }
 function updatePhysics(dt){
- const spring=5.7,drag=.96;
- for(const n of nodes){if(dragging&&dragging.id===n.id)continue;const damp=Math.pow(drag,dt*60);n.vx+=-n.dx*spring*dt;n.vy+=-n.dy*spring*dt;n.vx*=damp;n.vy*=damp;n.dx+=n.vx*dt;n.dy+=n.vy*dt;
-  n.dx=clamp(n.dx,-width*.09,width*.09);n.dy=clamp(n.dy,-height*.1,height*.1);
-  if(Math.abs(n.dx)<.03&&Math.abs(n.vx)<.03){n.dx=0;n.vx=0;}if(Math.abs(n.dy)<.03&&Math.abs(n.vy)<.03){n.dy=0;n.vy=0;}
+ // Dampen velocity but do not pull nodes back to their original homes. A node stays wherever it lands until another pulse moves it.
+ const drag=.955;
+ for(const n of nodes){
+  if(dragging&&dragging.id===n.id)continue;
+  const damp=Math.pow(drag,dt*60);n.vx*=damp;n.vy*=damp;n.dx+=n.vx*dt;n.dy+=n.vy*dt;
+  const h=home(n);n.dx=clamp(n.dx,18-h.x,width-18-h.x);n.dy=clamp(n.dy,24-h.y,height-24-h.y);
+  if(Math.abs(n.vx)<.035)n.vx=0;if(Math.abs(n.vy)<.035)n.vy=0;
  }
 }
 function randWeighted(list){let total=list.reduce((s,x)=>s+x.weight,0);if(!total)return list[0]?.edge;let v=Math.random()*total;for(const x of list){v-=x.weight;if(v<=0)return x.edge;}return list.at(-1)?.edge;}
@@ -281,16 +272,17 @@ function continueWave(w,now){
 }
 function stepWaves(now){const current=waves;waves=[];for(const w of current){if(now>=w.arrival)continueWave(w,now);else waves.push(w);}}
 function triggerPulse(id,amp){
- const n=byId.get(id);if(!n)return;const r=radial(n),now=nowMs();n.vx+=r.x*64*STRENGTH*amp;n.vy+=r.y*64*STRENGTH*amp;n.flash=now;n.hitCount++;selectedNode=id;selectedEdge=null;
+ const n=byId.get(id);if(!n)return;const now=nowMs();n.flash=now;n.hitCount++;selectedNode=id;selectedEdge=null;
  for(const e of adjacency.get(id)){const to=e.a===id?e.b:e.a;enqueue(id,to,e,transmittedAmp(amp,e),now+100+Math.random()*140);}
- flowing=true;lastInteraction=now;activity.textContent='Signals are moving through the field';
+
 }
 function nodeAt(x,y,t){for(const n of nodes.slice().reverse()){const p=pos(n,t);if(Math.hypot(p.x-x,p.y-y)<Math.max(14,width*.012))return n;}return null;}
 function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
 function pointerDown(ev){const p=pointerPos(ev),n=nodeAt(p.x,p.y,nowMs()/1000);if(!n)return;ev.preventDefault();canvas.setPointerCapture?.(ev.pointerId);const r=radial(n),cur=pos(n,nowMs()/1000);dragging={id:n.id,pointer:ev.pointerId,radial:r,start:n.dx*r.x+n.dy*r.y,offX:cur.x-p.x,offY:cur.y-p.y};n.vx=0;n.vy=0;selectedNode=n.id;selectedEdge=null;canvas.classList.add('dragging');}
 function pointerMove(ev){const p=pointerPos(ev),t=nowMs()/1000;if(dragging&&dragging.pointer===ev.pointerId){const n=byId.get(dragging.id),h=home(n),o=ambientOffset(n,t),px=p.x+dragging.offX,py=p.y+dragging.offY;n.dx=px-h.x-o.x;n.dy=py-h.y-o.y;return;}const n=nodeAt(p.x,p.y,t);hoveredNode=n?.id||null;canvas.style.cursor=n?'grab':'default';}
-function pointerUp(ev){if(!dragging||dragging.pointer!==ev.pointerId)return;const n=byId.get(dragging.id),r=dragging.radial,delta=n.dx*r.x+n.dy*r.y-dragging.start;dragging=null;canvas.classList.remove('dragging');canvas.style.cursor='default';if(Math.abs(delta)>=7)triggerPulse(n.id,clamp(delta/82,-1.15,1.15));else{selectedNode=n.id;activity.textContent=flowing?'Signals are moving through the field':'The field is at rest';}}
-function returnToRest(){waves=[];edges.forEach(e=>{e.flash=0;e.flashAmp=0;e.lastPulse=0;});nodes.forEach(n=>{n.dx=0;n.dy=0;n.vx=0;n.vy=0;n.flash=0;n.hitCount=0;});selectedNode=null;selectedEdge=null;flowing=false;activity.textContent='The field is at rest';}
+function finishPointerDrag(ev){if(!dragging||dragging.pointer!==ev.pointerId)return;const session=dragging,n=byId.get(session.id),r=session.radial,delta=n.dx*r.x+n.dy*r.y-session.start;dragging=null;canvas.classList.remove('dragging');canvas.style.cursor='default';if(canvas.hasPointerCapture?.(ev.pointerId)){try{canvas.releasePointerCapture(ev.pointerId);}catch(_){}}if(Math.abs(delta)>=7)triggerPulse(n.id,clamp(delta/82,-1.15,1.15));else selectedNode=n.id;}
+function pointerUp(ev){finishPointerDrag(ev);}
+function returnToRest(){waves=[];edges.forEach(e=>{e.flash=0;e.flashAmp=0;e.lastPulse=0;});nodes.forEach(n=>{n.dx=0;n.dy=0;n.vx=0;n.vy=0;n.flash=0;n.hitCount=0;});selectedNode=null;selectedEdge=null;}
 function fmtR(r){return `${r>=0?'+':'−'}${Math.abs(r).toFixed(3)}`;}
 function buildIndex(){
  const sorted=edges.slice().sort((a,b)=>Math.abs(b.r)-Math.abs(a.r));
@@ -298,7 +290,7 @@ function buildIndex(){
  edgeGrid.querySelectorAll('[data-edge]').forEach(btn=>btn.addEventListener('click',()=>{selectedEdge=Number(btn.dataset.edge);selectedNode=null;edgeGrid.querySelectorAll('.edge-item').forEach(el=>el.classList.toggle('active',el===btn));document.getElementById('scene').scrollIntoView({behavior:reducedMotion?'auto':'smooth',block:'start'});}));
 }
 function loop(now){if(!previous)previous=now;const dt=Math.min(.035,(now-previous)/1000||0);previous=now;updatePhysics(dt);stepWaves(now);draw(now/1000);requestAnimationFrame(loop);}
-canvas.addEventListener('pointerdown',pointerDown);canvas.addEventListener('pointermove',pointerMove);canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{dragging=null;canvas.classList.remove('dragging');});
+canvas.addEventListener('pointerdown',pointerDown);canvas.addEventListener('pointermove',pointerMove);canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',finishPointerDrag);
 canvas.addEventListener('pointerleave',()=>{if(!dragging)hoveredNode=null;});
 canvas.addEventListener('click',ev=>{if(dragging)return;const p=pointerPos(ev),n=nodeAt(p.x,p.y,nowMs()/1000);if(n){selectedNode=n.id;selectedEdge=null;edgeGrid.querySelectorAll('.edge-item').forEach(el=>el.classList.remove('active'));}});
 canvas.addEventListener('keydown',ev=>{if(ev.key==='Escape'){selectedNode=null;selectedEdge=null;}if((ev.key==='Enter'||ev.key===' ')&&selectedNode){ev.preventDefault();triggerPulse(selectedNode,.8);}});
